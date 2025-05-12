@@ -4,3 +4,5 @@ imports/__pycache__/
 Results.ipynb
 .ipynb_checkpoints/
 .venv/
+test/test_data/
+tutorial/tutorial_data/
