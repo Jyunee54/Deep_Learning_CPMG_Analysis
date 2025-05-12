@@ -529,7 +529,8 @@ def return_total_hier_index_list(A_list, cut_threshold):
             total_index_lists.append(temp_index)
         temp_index = return_combination_A_lists(temp_index, full_chosen_indices, cut_threshold=cut_threshold) 
         if len(temp_index) == 0:break 
-    return np.array(total_index_lists) 
+    # return np.array(total_index_lists)
+    return total_index_lists
 
 # Exclude unnecessary indices
 def return_reduced_hier_indices(hier_indices):

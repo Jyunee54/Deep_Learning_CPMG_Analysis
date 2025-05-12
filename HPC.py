@@ -11,8 +11,7 @@ np.set_printoptions(suppress=True)
 
 from multiprocessing import Pool 
 POOL_PROCESS = 23  
-FILE_GEN_INDEX = 2 
-pool = Pool(processes=POOL_PROCESS)  
+FILE_GEN_INDEX = 2
 
 import torch
 import torch.nn as nn
@@ -25,7 +24,13 @@ PRE_SCALE = 1
 MAGNETIC_FIELD = 403.553                        # # The external magnetic field strength. Unit: Gauss
 GYRO_MAGNETIC_RATIO = 1.0705*1000               # Unit: Herts 
 WL_VALUE = MAGNETIC_FIELD*GYRO_MAGNETIC_RATIO*2*np.pi 
-AB_lists_dic = np.load('./data/AB_target_dic_v4.npy').item() # a pre-calculated grouped list of nuclear spins with the same target period.
+
+# 첫 번재 파일 로드하여 초기 AB_lists_dic  todtjd
+AB_lists_dic = np.load('./data/AB_target_dic/AB_target_dic_v4_s0.npy', allow_pickle=True).item() # a pre-calculated grouped list of nuclear spins with the same target period.
+# 나머지 파일들을 반복문으로 로드하여  update
+for i in range(1, 16):
+    temp = np.load(f'./data/AB_target_dic/AB_target_dic_v4_s{i}.npy', allow_pickle=True).item()
+    AB_lists_dic.update(temp)
 
 class Regression_Model():
 
@@ -35,19 +40,26 @@ class Regression_Model():
             self.A_init, self.A_final, self.A_step, self.A_range, self.B_init, self.B_final, self.zero_scale, \
                 self.noise_scale, self.SAVE_DIR_NAME, self.model_lists, self.target_side_distance, self.is_CNN = args
 
-        self.exp_data_32 = np.load('./data/exp_data_32.npy')              # the experimental data to be evalutated
-        self.exp_data_deno_32 = np.load('./data/exp_data_32_deno.npy')    # the denoised experimental data to be evalutated
-        self.exp_data_256 = np.load('./data/exp_data_256.npy')            # the experimental data to be evalutated
-        self.exp_data_deno_256 = np.load('./data/exp_data_256_deno.npy')  # the denoised experimental data to be evalutated
-        self.time_data_32 = np.load('./data/time_data_32.npy')            # the time data for the experimental data to be evalutated
-        self.time_data_256 = np.load('./data/time_data_256.npy')          # the time data for the experimental data to be evalutated
-        self.spin_bath_32 = np.load('./data/spin_bath_M_value_N32.npy')   # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
-        self.spin_bath_256 = np.load('./data/spin_bath_M_value_N256.npy') # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
-        self.total_indices_32 = np.load('./data/total_indices_v4_N32.npy').item()   # pre-calculated time_indexing file by using Eqn.(4) in the maintext
-        self.total_indices_256 = np.load('./data/total_indices_v4_N256.npy').item() 
+        self.exp_data_32 = np.load('./data/exp_data/exp_data_32.npy')              # the experimental data to be evalutated
+        self.exp_data_deno_32 = np.load('./data/exp_data/exp_data_32_deno.npy')    # the denoised experimental data to be evalutated
+        self.exp_data_256 = np.load('./data/exp_data/exp_data_256.npy')            # the experimental data to be evalutated
+        self.exp_data_deno_256 = np.load('./data/exp_data/exp_data_256_deno.npy')  # the denoised experimental data to be evalutated
+        self.time_data_32 = np.load('./data/time_data/time_data_32.npy')            # the time data for the experimental data to be evalutated
+        self.time_data_256 = np.load('./data/time_data/time_data_256.npy')          # the time data for the experimental data to be evalutated
+        self.spin_bath_32 = np.load('./data/spin_bath/spin_bath_M_value_N32.npy')   # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
+        self.spin_bath_256 = np.load('./data/spin_bath/spin_bath_M_value_N256.npy') # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
+        self.total_indices_32 = np.load('./data/total_indices/total_indices_v4_N32.npy', allow_pickle=True).item()   # pre-calculated time_indexing file by using Eqn.(4) in the maintext
+        self.total_indices_256 = np.load('./data/total_indices/total_indices_v4_N256.npy', allow_pickle=True).item()
 
         if self.EXISTING_SPINS:
-            deno_pred_N32_B15000_above = np.load('./data/predicted_results_N32_B15000above.npy') 
+            deno_pred_N32_B15000_above = np.load('./data/predicted_results_N32_B15000above.npy')
+
+        self.pool = Pool(processes=POOL_PROCESS)
+
+    def close_pool(self):
+        self.pool.close()
+        self.pool.terminate()
+        self.pool.join()
 
     def estimate_specific_AB_values(self, predicted_periods):
 
@@ -173,7 +185,7 @@ class Regression_Model():
                 Y_train_arr[class_idx, :, class_idx] = 1
                 for idx1 in range(cpu_num_for_multi):
                     AB_lists_batch = final_TPk_AB_candidates[class_idx, idx1*mini_batch:(idx1+1)*mini_batch]
-                    globals()["pool_{}".format(idx1)] = pool.apply_async(gen_M_arr_batch, [AB_lists_batch, model_index_32, self.time_data_32[:self.TIME_RANGE_32], 
+                    globals()["pool_{}".format(idx1)] = self.pool.apply_async(gen_M_arr_batch, [AB_lists_batch, model_index_32, self.time_data_32[:self.TIME_RANGE_32],
                                                                                             WL_VALUE, 32, PRE_PROCESS, PRE_SCALE, 
                                                                                             self.noise_scale, self.spin_bath_32[:self.TIME_RANGE_32]])
 
@@ -198,12 +210,12 @@ class Regression_Model():
                     Y_train_256[class_idx, :, class_idx] = 1
                     for idx1 in range(cpu_num_for_multi):
                         AB_lists_batch = final_TPk_AB_candidates[class_idx, idx1*mini_batch:(idx1+1)*mini_batch]
-                        globals()["pool_{}".format(idx1)] = pool.apply_async(gen_M_arr_batch, [AB_lists_batch, model_index_256, time_data[:self.TIME_RANGE_256], 
-                                                                                                WL_VALUE, 256, PRE_PROCESS, PRE_SCALE, 
+                        globals()["pool_{}".format(idx1)] = self.pool.apply_async(gen_M_arr_batch, [AB_lists_batch, model_index_256, time_data[:self.TIME_RANGE_256],
+                                                                                                WL_VALUE, 256, PRE_PROCESS, PRE_SCALE,
                                                                                                 self.noise_scale, self.spin_bath[:self.TIME_RANGE_256]])
 
                     for idx2 in range(cpu_num_for_multi):
-                        X_train_256[class_idx, idx2*mini_batch:(idx2+1)*mini_batch] = globals()["pool_{}".format(idx2)].get(timeout=None) 
+                        X_train_256[class_idx, idx2*mini_batch:(idx2+1)*mini_batch] = globals()["pool_{}".format(idx2)].get(timeout=None)
                     print("class_idx:", class_idx, end=' ') 
                 
                 X_train_256 = X_train_256.reshape(-1, model_index_256.flatten().shape[0]) 
@@ -277,14 +289,21 @@ class HPC_Model():
         self.time_range_store = self.TIME_RANGE
         self.image_width_store = self.IMAGE_WIDTH
 
-        self.exp_data = np.load('./data/exp_data_{}.npy'.format(self.N_PULSE)).flatten()  # the experimental data to be evalutated
-        self.exp_data_deno = np.load('./data/exp_data_{}_deno.npy'.format(self.N_PULSE))  # the denoised experimental data to be evalutated
-        self.time_data = np.load('./data/time_data_{}.npy'.format(self.N_PULSE))          # the time data for the experimental data to be evalutated
-        self.spin_bath = np.load('./data/spin_bath_M_value_N{}.npy'.format(self.N_PULSE)) # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
-        self.total_indices = np.load('./data/total_indices_v4_N{}.npy'.format(self.N_PULSE)).item() 
+        self.exp_data = np.load('./data/exp_data/exp_data_{}.npy'.format(self.N_PULSE)).flatten()  # the experimental data to be evalutated
+        self.exp_data_deno = np.load('./data/exp_data/exp_data_{}_deno.npy'.format(self.N_PULSE))  # the denoised experimental data to be evalutated
+        self.time_data = np.load('./data/time_data/time_data_{}.npy'.format(self.N_PULSE))          # the time data for the experimental data to be evalutated
+        self.spin_bath = np.load('./data/spin_bath/spin_bath_M_value_N{}.npy'.format(self.N_PULSE)) # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
+        self.total_indices = np.load('./data/total_indices/total_indices_v4_N{}.npy'.format(self.N_PULSE), allow_pickle=True).item()
 
         if self.EXISTING_SPINS:
-            deno_pred_N32_B15000_above = np.load('./data/predicted_results_N32_B15000above.npy') 
+            deno_pred_N32_B15000_above = np.load('./data/predicted_results_N32_B15000above.npy')
+
+        self.pool = Pool(processes=POOL_PROCESS)
+
+    def close_pool(self):
+        self.pool.close()
+        self.pool.terminate()
+        self.pool.join()
         
     def binary_classification_train(self):
 
@@ -417,7 +436,7 @@ class HPC_Model():
                 for class_idx in range(class_num):
                     for idx2 in range(cpu_num_for_multi):
                         AB_lists_batch = TPk_AB_candi[class_idx, idx1*class_batch+idx2*batch_for_multi:idx1*class_batch+(idx2+1)*batch_for_multi]
-                        globals()["pool_{}".format(idx2)] = pool.apply_async(gen_M_arr_batch, [AB_lists_batch, model_index, self.time_data[:self.TIME_RANGE], 
+                        globals()["pool_{}".format(idx2)] = self.pool.apply_async(gen_M_arr_batch, [AB_lists_batch, model_index, self.time_data[:self.TIME_RANGE],
                                                                                                 WL_VALUE, self.N_PULSE, PRE_PROCESS, PRE_SCALE, 
                                                                                                 self.noise_scale, self.spin_bath[:self.TIME_RANGE]])
 
@@ -444,7 +463,7 @@ class HPC_Model():
             total_parameter = sum(p.numel() for p in model.parameters()) 
             print('total_parameter: ', total_parameter / 1000000, 'M')
 
-            MODEL_PATH = './data/models/' + self.SAVE_DIR_NAME + '/'
+            MODEL_PATH = './data/models/'
             if not os.path.exists(MODEL_PATH): os.mkdir(MODEL_PATH)
 
             mini_batch_list = [1024]  
@@ -469,9 +488,9 @@ class HPC_Model():
         total_raw_pred_list  = np.array(total_raw_pred_list).T
         total_deno_pred_list = np.array(total_deno_pred_list).T
 
-        np.save(MODEL_PATH+'total_N{}_A_idx.npy'.format(self.N_PULSE), total_A_lists)
-        np.save(MODEL_PATH+'total_N{}_raw_pred.npy'.format(self.N_PULSE), total_raw_pred_list)
-        np.save(MODEL_PATH+'total_N{}_deno_pred.npy'.format(self.N_PULSE), total_deno_pred_list)
+        np.save(self.SAVE_DIR_NAME+'total_N{}_A_idx.npy'.format(self.N_PULSE), total_A_lists)
+        np.save(self.SAVE_DIR_NAME+'total_N{}_raw_pred.npy'.format(self.N_PULSE), total_raw_pred_list)
+        np.save(self.SAVE_DIR_NAME+'total_N{}_deno_pred.npy'.format(self.N_PULSE), total_deno_pred_list)
 
         print('================================================================')
         print('Training Completed. Parsing parameters as follows.')
