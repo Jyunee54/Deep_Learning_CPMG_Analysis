@@ -32,6 +32,17 @@ for i in range(1, 16):
     temp = np.load(f'./data/AB_target_dic/AB_target_dic_v4_s{i}.npy', allow_pickle=True).item()
     AB_lists_dic.update(temp)
 
+# 파라미터 값
+A_SIDE_NUM = 3
+A_SIDE_RESOL = 600
+A_TARGET_MARGIN = 25
+A_SIDE_MARGIN = 300
+A_FAR_SIDE_MARGIN = 5000
+A_HIER_MARGIN = 25
+A_HIER_MARGIN = 25
+SIDE_CANDI_NUM = 2
+B_TARGET_GAP = 0
+
 class Regression_Model():
 
     def __init__(self, *args):
@@ -88,13 +99,13 @@ class Regression_Model():
                 B_idx_list = np.arange(B_first, B_end, B_num*B_resol)
             AB_idx_set = [[A_idx, B_idx] for A_idx, B_idx in itertools.product(A_idx_list, B_idx_list)]
 
-            A_side_num = 8
-            A_side_resol = 600
-            A_target_margin = 25
-            A_side_margin = 300
-            A_far_side_margin = 5000
-            A_hier_margin = 25
-            side_candi_num = 5             # the number of "how many times" to generate 'AB_side_candidate'
+            A_side_num = A_SIDE_NUM
+            A_side_resol = A_SIDE_RESOL
+            A_target_margin = A_TARGET_MARGIN
+            A_side_margin = A_SIDE_MARGIN
+            A_far_side_margin = A_FAR_SIDE_MARGIN
+            A_hier_margin = A_HIER_MARGIN
+            side_candi_num = SIDE_CANDI_NUM        # the number of "how many times" to generate 'AB_side_candidate'
 
             if self.N_PULSE==32:
                 B_side_min, B_side_max = 6000, 70000
@@ -346,13 +357,13 @@ class HPC_Model():
                 B_idx_list = np.arange(B_first, B_end, B_num*B_resol)
             AB_idx_set = [[A_idx, B_idx] for A_idx, B_idx in itertools.product(A_idx_list, B_idx_list)]
 
-            A_side_num = 8
-            A_side_resol = 600
-            B_target_gap = 0
-            A_target_margin = 25
-            A_side_margin = 300
-            A_far_side_margin = 5000
-            side_candi_num = 5             # the number of "how many times" to generate 'AB_side_candidate'
+            A_side_num = A_SIDE_NUM
+            A_side_resol = A_SIDE_RESOL
+            B_target_gap = B_TARGET_GAP
+            A_target_margin = A_TARGET_MARGIN
+            A_side_margin = A_SIDE_MARGIN
+            A_far_side_margin = A_FAR_SIDE_MARGIN
+            side_candi_num = SIDE_CANDI_NUM     # the number of "how many times" to generate 'AB_side_candidate'
 
             class_num = A_num*B_num + 1
             cpu_num_for_multi = 20
