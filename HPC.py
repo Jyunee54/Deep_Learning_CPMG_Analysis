@@ -43,6 +43,20 @@ A_HIER_MARGIN = 25
 SIDE_CANDI_NUM = 2
 B_TARGET_GAP = 0
 
+# 파일 경로
+EXP_DATA_32_PATH = './data/exp_data/exp_data_32.npy'                        # the experimental data to be evalutated
+EXP_DATA_DENO_32_PATH = './data/exp_data/exp_data_32_deno.npy'              # the denoised experimental data to be evalutated
+EXP_DATA_256_PATH = './data/exp_data/exp_data_256.npy'                      # the experimental data to be evalutated
+EXP_DATA_DENO_256_PATH = './data/exp_data/exp_data_256_deno.npy'            # the denoised experimental data to be evalutated
+TIME_DATA_32_PATH = './data/time_data/time_data_32.npy'                     # the time data for the experimental data to be evalutated
+TIME_DATA_256_PATH = './data/time_data/time_data_256.npy'                   # the time data for the experimental data to be evalutated
+SPIN_BATH_32_PATH = './data/spin_bath/spin_bath_M_value_N32.npy'            # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
+SPIN_BATH_256_PATH = './data/spin_bath/spin_bath_M_value_N256.npy'          # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
+TOTAL_INDICES_32_PATH = './data/total_indices/total_indices_v4_N32.npy'     # pre-calculated time_indexing file by using Eqn.(4) in the maintext
+TOTAL_INDICES_256_PATH = './data/total_indices/total_indices_v4_N256.npy'
+
+DENO_PRED_N32_B15000_ABOVE_PATH = './data/predicted_results_N32_B15000above.npy'
+
 class Regression_Model():
 
     def __init__(self, *args):
@@ -51,19 +65,19 @@ class Regression_Model():
             self.A_init, self.A_final, self.A_step, self.A_range, self.B_init, self.B_final, self.zero_scale, \
                 self.noise_scale, self.SAVE_DIR_NAME, self.model_lists, self.target_side_distance, self.is_CNN = args
 
-        self.exp_data_32 = np.load('./data/exp_data/exp_data_32.npy')              # the experimental data to be evalutated
-        self.exp_data_deno_32 = np.load('./data/exp_data/exp_data_32_deno.npy')    # the denoised experimental data to be evalutated
-        self.exp_data_256 = np.load('./data/exp_data/exp_data_256.npy')            # the experimental data to be evalutated
-        self.exp_data_deno_256 = np.load('./data/exp_data/exp_data_256_deno.npy')  # the denoised experimental data to be evalutated
-        self.time_data_32 = np.load('./data/time_data/time_data_32.npy')            # the time data for the experimental data to be evalutated
-        self.time_data_256 = np.load('./data/time_data/time_data_256.npy')          # the time data for the experimental data to be evalutated
-        self.spin_bath_32 = np.load('./data/spin_bath/spin_bath_M_value_N32.npy')   # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
-        self.spin_bath_256 = np.load('./data/spin_bath/spin_bath_M_value_N256.npy') # the spin bath data for the experimental N_PULSE (it is not pre-requisite so one can just ignore this line.)
-        self.total_indices_32 = np.load('./data/total_indices/total_indices_v4_N32.npy', allow_pickle=True).item()   # pre-calculated time_indexing file by using Eqn.(4) in the maintext
-        self.total_indices_256 = np.load('./data/total_indices/total_indices_v4_N256.npy', allow_pickle=True).item()
+        self.exp_data_32 = np.load(EXP_DATA_32_PATH)
+        self.exp_data_deno_32 = np.load(EXP_DATA_DENO_32_PATH)
+        self.exp_data_256 = np.load(EXP_DATA_256_PATH)
+        self.exp_data_deno_256 = np.load(EXP_DATA_DENO_256_PATH)
+        self.time_data_32 = np.load(TIME_DATA_32_PATH)
+        self.time_data_256 = np.load(TIME_DATA_256_PATH)
+        self.spin_bath_32 = np.load(SPIN_BATH_32_PATH)
+        self.spin_bath_256 = np.load(SPIN_BATH_256_PATH)
+        self.total_indices_32 = np.load(TOTAL_INDICES_32_PATH, allow_pickle=True).item()
+        self.total_indices_256 = np.load(TOTAL_INDICES_256_PATH, allow_pickle=True).item()
 
         if self.EXISTING_SPINS:
-            deno_pred_N32_B15000_above = np.load('./data/predicted_results_N32_B15000above.npy')
+            deno_pred_N32_B15000_above = np.load(DENO_PRED_N32_B15000_ABOVE_PATH)
 
         self.pool = Pool(processes=POOL_PROCESS)
 
@@ -155,7 +169,7 @@ class Regression_Model():
                     side_candidates   = np.concatenate((side_candidates, TPk_AB_candi[0, :, 0, :]), axis=0)
                     rest_candidates   = np.concatenate((rest_candidates, TPk_AB_candi[1, :, 1:, :]), axis=0) 
 
-            hier_indices = return_total_hier_index_list(A_idx_list, cut_threshold=2)
+            hier_indices = return_total_hier_index_list(A_idx_list, cut_threshold=4)
             total_class_num = hier_indices[-1][0].__len__() + 1
 
             total_TPk_AB_candidates = np.zeros((total_class_num, num_of_summation*TPk_AB_candi.shape[1], total_class_num+TPk_AB_candi.shape[2]+2, 2))
@@ -187,7 +201,7 @@ class Regression_Model():
             print("Generating N32 data..")
             model_index_32 = get_model_index(self.total_indices_32, AB_idx_set[median_A_idx][0], time_thres_idx=self.TIME_RANGE_32, image_width=self.IMAGE_WIDTH) 
             if (AB_idx_set[median_A_idx][0] > 13000) | (AB_idx_set[median_A_idx][0] < -13000):
-                model_index_32 = return_index_without_A_idx(self.total_indices_32, model_index_32, 0, self.TIME_RANGE_32, 5)
+                model_index_32, _ = return_index_without_A_idx(self.total_indices_32, model_index_32, 0, self.TIME_RANGE_32, 5)
             total_class_num = final_TPk_AB_candidates.shape[0]
             X_train_arr = np.zeros((total_class_num, final_TPk_AB_candidates.shape[1], model_index_32.shape[0], 2*self.IMAGE_WIDTH+1))
             Y_train_arr = np.zeros((total_class_num, final_TPk_AB_candidates.shape[1], total_class_num))
@@ -212,7 +226,7 @@ class Regression_Model():
                 print("Generating N256 data..")
                 model_index_256 = get_model_index(self.total_indices_256, AB_idx_set[median_A_idx][0], time_thres_idx=self.TIME_RANGE_256, image_width=self.IMAGE_WIDTH) 
                 if (AB_idx_set[median_A_idx][0] > 13000) | (AB_idx_set[median_A_idx][0] < -13000):
-                    model_index_256 = return_index_without_A_idx(self.total_indices_256, model_index_256, 0, self.TIME_RANGE_256, 5)
+                    model_index_256, _ = return_index_without_A_idx(self.total_indices_256, model_index_256, 0, self.TIME_RANGE_256, 5)
                 total_class_num = final_TPk_AB_candidates.shape[0]
                 X_train_256 = np.zeros((total_class_num, final_TPk_AB_candidates.shape[1], model_index_256.shape[0], 2*self.IMAGE_WIDTH+1))
                 Y_train_256 = np.zeros((total_class_num, final_TPk_AB_candidates.shape[1], total_class_num))

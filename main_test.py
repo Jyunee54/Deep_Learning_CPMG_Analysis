@@ -25,12 +25,12 @@ EXISTING_SPINS = 0
 EVALUATION_ALL = 0
 
 target_side_distance = 3000
-A_init  = 15000
-A_final = 20000
+A_init  = 20000
+A_final = 40000
 A_step  = 500
 A_range = 500
 B_init  = 20000
-B_final = 80000
+B_final = 50000
 noise_scale = 0.5
 zero_scale = 0.05
 SAVE_DIR_NAME = "./data/results/"
@@ -114,10 +114,14 @@ if __name__ == '__main__':
         total_A_lists, total_raw_pred_list, total_deno_pred_list = hpc_model.binary_classification_train()
 
         print('Total computational time:', time.time() - tic)
-        hpc_model.close_pool()
 
         predicted_periods = return_filtered_A_lists_wrt_pred(np.array(total_deno_pred_list[1,:]), np.array(total_A_lists), 0.8)
         # predicted_periods = np.load('/home/sonic/Coding/Git/Paper_git_repo/Deep_Learning_CPMG_Analysis/data/models/predicted_periods.npy')
+        hpc_model.close_pool()
+
+        # 디버깅
+        print(f"predicted_periods: {predicted_periods}")
+        print(f"len(predicted_periods): {len(predicted_periods)}")
 
         zero_scale = 0.
         regression_args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final,
@@ -126,7 +130,7 @@ if __name__ == '__main__':
 
         try:
             regression_results = regression_model.estimate_specific_AB_values(predicted_periods)
-            np.save('./data/models/regression_results.npy', regression_results)
+            np.save('./data/results/regression_results.npy', regression_results)
         finally:
             regression_model.close_pool()
 
