@@ -130,11 +130,13 @@ if __name__ == '__main__':
 
         try:
             regression_results = regression_model.estimate_specific_AB_values(predicted_periods)
-            np.save('./data/results/regression_results.npy', regression_results)
+            with open('./data/results/regression_results.pkl', 'wb') as f:
+                pickle.dump(regression_results, f)
         finally:
             regression_model.close_pool()
 
 
+    # 테스트 및 디버깅용 수동 실행 코드
     # args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, EXISTING_SPINS, A_init, A_final, A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index)
     #
     # hpc_model = HPC_Model(*args)
