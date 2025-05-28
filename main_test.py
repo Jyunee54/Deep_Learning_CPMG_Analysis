@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from torch import dtype
+
 np.set_printoptions(suppress=True)
 import glob
 import sys
@@ -54,7 +56,7 @@ if __name__ == '__main__':
         hpc_model = HPC_Model(*args)
         total_A_lists, total_raw_pred_list, total_deno_pred_list = hpc_model.binary_classification_train()
         predicted_periods = return_filtered_A_lists_wrt_pred(total_deno_pred_list[1,:], np.array(total_A_lists))
-        np.save(SAVE_DIR_NAME + "predicted_periods.npy", predicted_periods)
+        np.save(SAVE_DIR_NAME + "predicted_periods.npy", np.array(predicted_periods, dtype=object))
 
         regression_args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final,
                             A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN)
@@ -111,14 +113,17 @@ if __name__ == '__main__':
         elif N_PULSE==256:
             args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final,
                     A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index)
-        hpc_model = HPC_Model(*args)
-        total_A_lists, total_raw_pred_list, total_deno_pred_list = hpc_model.binary_classification_train()
+        # hpc_model = HPC_Model(*args)
+        # total_A_lists, total_raw_pred_list, total_deno_pred_list = hpc_model.binary_classification_train()
+        #
+        # print('Total computational time:', time.time() - tic)
 
-        print('Total computational time:', time.time() - tic)
-
-        predicted_periods = return_filtered_A_lists_wrt_pred(np.array(total_deno_pred_list[1,:]), np.array(total_A_lists), 0.8)
-        # predicted_periods = np.load(SAVE_DIR_NAME + 'predicted_periods.npy')
-        hpc_model.close_pool()
+        # predicted_periods = return_filtered_A_lists_wrt_pred(np.array(total_deno_pred_list[1,:]), np.array(total_A_lists), 0.8)
+        # hpc_model.close_pool()
+        #
+        # np.save(SAVE_DIR_NAME + 'predicted_periods.npy', np.array(predicted_periods, dtype=object))
+        # print("✅ HPC 결과를 저장했습니다.")
+        predicted_periods = np.load(SAVE_DIR_NAME + 'predicted_periods.npy', allow_pickle=True)
 
         # 디버깅
         print(f"predicted_periods: {predicted_periods}")
@@ -129,6 +134,7 @@ if __name__ == '__main__':
                             A_step, A_range, B_init, B_final, zero_scale, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN)
         regression_model = Regression_Model(*regression_args)
         regression_results = regression_model.estimate_specific_AB_values(predicted_periods)
+        regression_model.close_pool()
 
         # B 값이 15000 이상인 하이퍼핀 파라미터만 필터링해서 저장
         filtered_results = [res for res in regression_results if res[1] > 15000]  # res = [A, B] 형태라고 가정
@@ -154,7 +160,7 @@ if __name__ == '__main__':
     # print('Total computational time:', time.time() - tic)
     #
     # predicted_periods = return_filtered_A_lists_wrt_pred(np.array(total_deno_pred_list[1,:]), np.array(total_A_lists), 0.8)
-    # predicted_periods = np.load('/home/sonic/Coding/Git/Paper_git_repo/Deep_Learning_CPMG_Analysis/data/models/predicted_periods.npy')
+    # predicted_periods = np.load(SAVE_DIR_NAME + 'predicted_periods.npy')
     # zero_scale = 0.
     # regression_args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final, A_step, A_range, B_init, B_final, zero_scale, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN)
     # regression_model = Regression_Model(*regression_args)

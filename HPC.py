@@ -321,7 +321,7 @@ class HPC_Model():
         self.total_indices = np.load('./data/total_indices/total_indices_v4_N{}.npy'.format(self.N_PULSE), allow_pickle=True).item()
 
         if self.EXISTING_SPINS:
-            deno_pred_N32_B15000_above = np.load('./data/predicted_results_N32_B15000above.npy')
+            deno_pred_N32_B15000_above = np.load(self.SAVE_DIR_NAME + 'predicted_results_N32_B15000above.npy')
 
         self.pool = Pool(processes=POOL_PROCESS)
 
@@ -334,7 +334,7 @@ class HPC_Model():
 
         tic = time.time() 
         if self.EXISTING_SPINS:
-            deno_pred_N32_B15000_above = np.load('./data/predicted_results_N32_B15000above.npy') 
+            deno_pred_N32_B15000_above = np.load(self.SAVE_DIR_NAME + 'predicted_results_N32_B15000above.npy')
         total_raw_pred_list = []
         total_deno_pred_list = []
         total_A_lists = []
@@ -364,6 +364,8 @@ class HPC_Model():
             A_num = 1
             B_num = 1
             A_resol, B_resol = 50, B_end-B_first+500
+
+            # A, B 인덱스 리스트 생성
             A_idx_list = np.arange(A_first, A_end+A_resol, A_num*A_resol)
             if (B_end-B_first)%B_resol==0:
                 B_idx_list = np.arange(B_first, B_end+B_resol, B_num*B_resol)
