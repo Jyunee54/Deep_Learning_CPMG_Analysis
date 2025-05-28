@@ -170,8 +170,6 @@ class Regression_Model():
                     rest_candidates   = np.concatenate((rest_candidates, TPk_AB_candi[1, :, 1:, :]), axis=0) 
 
             hier_indices = return_total_hier_index_list(A_idx_list, cut_threshold=4)
-            print(f"hier_indices: {hier_indices}")
-            print(f"A_idx_list: {A_idx_list}")
             if len(hier_indices)==0 or len(hier_indices[-1])==0 or len(hier_indices[-1][0])==0:
                 print("⚠️ hier_indices가 비어 있거나 구조적으로 잘못되었습니다. total_class_num = 1")
             total_class_num = len(hier_indices[-1][0]) + 1
@@ -190,7 +188,6 @@ class Regression_Model():
             for class_idx, hier_index in enumerate(hier_indices): 
                 temp_batch = total_TPk_AB_candidates.shape[1] // len(hier_index)
                 for idx2, index in enumerate(hier_index):
-                    print(f"index: {index}")
                     temp = np.swapaxes(total_hier_target_AB_candi[index], 0, 1)
                     if idx2 < (len(hier_index)-1):
                         temp_idx = np.random.randint(total_hier_target_AB_candi.shape[1], size=(temp_batch))
