@@ -10,7 +10,7 @@ import argparse
 np.set_printoptions(suppress=True)
 
 from multiprocessing import Pool 
-POOL_PROCESS = 23  
+POOL_PROCESS = 10
 FILE_GEN_INDEX = 2
 
 import torch
@@ -140,7 +140,7 @@ class Regression_Model():
                 print("==================== PRE_PROCESSING:True =====================")
 
             class_num = A_num*B_num + 1
-            cpu_num_for_multi = 20
+            cpu_num_for_multi = 10
             batch_for_multi = 256
             class_batch = cpu_num_for_multi*batch_for_multi
 
@@ -170,7 +170,11 @@ class Regression_Model():
                     rest_candidates   = np.concatenate((rest_candidates, TPk_AB_candi[1, :, 1:, :]), axis=0) 
 
             hier_indices = return_total_hier_index_list(A_idx_list, cut_threshold=4)
-            total_class_num = hier_indices[-1][0].__len__() + 1
+            print(f"hier_indices: {hier_indices}")
+            print(f"A_idx_list: {A_idx_list}")
+            if len(hier_indices)==0 or len(hier_indices[-1])==0 or len(hier_indices[-1][0])==0:
+                print("⚠️ hier_indices가 비어 있거나 구조적으로 잘못되었습니다. total_class_num = 1")
+            total_class_num = len(hier_indices[-1][0]) + 1
 
             total_TPk_AB_candidates = np.zeros((total_class_num, num_of_summation*TPk_AB_candi.shape[1], total_class_num+TPk_AB_candi.shape[2]+2, 2))
             indices = np.random.randint(rest_candidates.shape[0], size=(total_class_num, rest_candidates.shape[0]))
@@ -186,6 +190,7 @@ class Regression_Model():
             for class_idx, hier_index in enumerate(hier_indices): 
                 temp_batch = total_TPk_AB_candidates.shape[1] // len(hier_index)
                 for idx2, index in enumerate(hier_index):
+                    print(f"index: {index}")
                     temp = np.swapaxes(total_hier_target_AB_candi[index], 0, 1)
                     if idx2 < (len(hier_index)-1):
                         temp_idx = np.random.randint(total_hier_target_AB_candi.shape[1], size=(temp_batch))

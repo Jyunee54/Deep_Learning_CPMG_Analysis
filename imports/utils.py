@@ -502,7 +502,7 @@ def return_combination_A_lists(chosen_indices, full_chosen_indices, cut_threshol
 def return_total_hier_index_list(A_list, cut_threshold):
     total_index_lists = []
 
-    A_list_length = len(A_list) 
+    A_list_length = len(A_list)
     if (A_list_length==1): return np.array([[[0]]])
     if (A_list_length==2): return np.array([[[0], [1]]])
     if (A_list_length==3): return np.array([[[1]]])
@@ -510,26 +510,26 @@ def return_total_hier_index_list(A_list, cut_threshold):
     if (A_list_length==5): return np.array([[[1],[2],[3]], [[1,3]]], dtype=object)
 
     if A_list_length%2 == 0:
-        final_idx = A_list_length//2 
+        final_idx = A_list_length//2
     else:
         final_idx = A_list_length//2 + 1
 
-    full_chosen_indices = np.arange(1, A_list_length-1) 
-    half_chosen_indices = np.arange(1, final_idx) 
-    temp_index = return_combination_A_lists(half_chosen_indices, full_chosen_indices, cut_threshold=cut_threshold) 
+    full_chosen_indices = np.arange(1, A_list_length-1)
+    total_index_lists.append(list([list([int(i)]) for i in full_chosen_indices]))
+    half_chosen_indices = np.arange(1, final_idx)
+    temp_index = return_combination_A_lists(half_chosen_indices, full_chosen_indices, cut_threshold=cut_threshold)
 
     while 1:
+        if len(temp_index) == 0: break
         if (A_list_length>=10) & (A_list_length<12):
             if len(temp_index[0])>=2: total_index_lists.append(temp_index)
-        elif (A_list_length>=12) & (A_list_length<15): 
+        elif (A_list_length>=12) & (A_list_length<15):
             if len(temp_index[0])>=3: total_index_lists.append(temp_index)
         elif (A_list_length>=15):
             if len(temp_index[0])>=4: total_index_lists.append(temp_index)
         else:
             total_index_lists.append(temp_index)
-        temp_index = return_combination_A_lists(temp_index, full_chosen_indices, cut_threshold=cut_threshold) 
-        if len(temp_index) == 0:break 
-    # return np.array(total_index_lists)
+        temp_index = return_combination_A_lists(temp_index, full_chosen_indices, cut_threshold=cut_threshold)
     return total_index_lists
 
 # Exclude unnecessary indices
