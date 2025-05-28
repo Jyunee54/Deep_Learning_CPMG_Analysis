@@ -507,7 +507,7 @@ def return_total_hier_index_list(A_list, cut_threshold):
     if (A_list_length==2): return np.array([[[0], [1]]])
     if (A_list_length==3): return np.array([[[1]]])
     if (A_list_length==4): return np.array([[[1], [2]]])
-    if (A_list_length==5): return np.array([[[1],[2],[3]], [[1,3]]])
+    if (A_list_length==5): return np.array([[[1],[2],[3]], [[1,3]]], dtype=object)
 
     if A_list_length%2 == 0:
         final_idx = A_list_length//2 
@@ -543,7 +543,7 @@ def return_reduced_hier_indices(hier_indices):
         set_lists = set(map(tuple, temp))
         listed_lists = list(map(list, set_lists))
         total_lists.append(listed_lists) 
-    return np.array(total_lists) 
+    return total_lists
 
 # Used in a regression model to nomalize hyperfine parameters. 
 def Y_train_normalization(arr):
