@@ -486,7 +486,7 @@ def gaussian_slope_px(M_lists: "data of M values", time_table: "time data",
 # The following two functions are used for producing index combinations to select multiple Target Period(TP)s for HPC models.
 # : these two functions are used for determining the number of spins in a single broad dip in CPMG signal
 def return_combination_A_lists(chosen_indices, full_chosen_indices, cut_threshold):
-    total_combination = [] 
+    total_combination = set()
     for temp_idx in chosen_indices: 
         indices = [] 
         if type(temp_idx) == np.int64: 
@@ -495,9 +495,11 @@ def return_combination_A_lists(chosen_indices, full_chosen_indices, cut_threshol
             abs_temp = np.abs(temp_idx - j) 
             if len(abs_temp[abs_temp<cut_threshold]) == 0:
                 indices.append(j) 
-        temp_idx = list(temp_idx) 
-        total_combination += [temp_idx+[j] for j in indices]
-    return np.array(total_combination) 
+        temp_idx = list(temp_idx)
+        for j in indices:
+            combo = tuple(sorted(temp_idx + [j]))
+            total_combination.add(combo)
+    return [list(c) for c in total_combination]
 
 def return_total_hier_index_list(A_list, cut_threshold):
     total_index_lists = []
@@ -518,6 +520,7 @@ def return_total_hier_index_list(A_list, cut_threshold):
     total_index_lists.append(list([list([int(i)]) for i in full_chosen_indices]))
     half_chosen_indices = np.arange(1, final_idx)
     temp_index = return_combination_A_lists(half_chosen_indices, full_chosen_indices, cut_threshold=cut_threshold)
+    seen = set(tuple(sorted(c)) for c in temp_index)  # 중복 제거용 집합
 
     while 1:
         if len(temp_index) == 0: break
@@ -529,7 +532,13 @@ def return_total_hier_index_list(A_list, cut_threshold):
             if len(temp_index[0])>=4: total_index_lists.append(temp_index)
         else:
             total_index_lists.append(temp_index)
-        temp_index = return_combination_A_lists(temp_index, full_chosen_indices, cut_threshold=cut_threshold)
+
+        # 다음 조합 생성 및 중복 제거
+        temp_index = return_combination_A_lists(temp_index, full_chosen_indices, cut_threshold)
+        temp_index = [c for c in temp_index if tuple(c) not in seen]
+        for c in temp_index:
+            seen.add(tuple(c))
+
     return total_index_lists
 
 # Exclude unnecessary indices
