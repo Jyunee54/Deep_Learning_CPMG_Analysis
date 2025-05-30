@@ -27,8 +27,8 @@ EXISTING_SPINS = 0
 EVALUATION_ALL = 0
 
 target_side_distance = 3000
-A_init  = -30000
-A_final = 30000
+A_init  = 10000
+A_final = 20000
 A_step  = 200
 A_range = 200
 B_init  = 1500
@@ -123,18 +123,30 @@ if __name__ == '__main__':
         #
         # np.save(SAVE_DIR_NAME + 'predicted_periods.npy', np.array(predicted_periods, dtype=object))
         # print("✅ HPC 결과를 저장했습니다.")
-        predicted_periods = np.load(SAVE_DIR_NAME + 'predicted_periods.npy', allow_pickle=True)
+        # predicted_periods = np.load(SAVE_DIR_NAME + 'predicted_periods.npy', allow_pickle=True)
 
-        # 디버깅
-        print(f"predicted_periods: {predicted_periods}")
-        print(f"len(predicted_periods): {len(predicted_periods)}")
+        # def split_A_range(A_init, A_final, step=50, group_size = 20):
+        #     A_values = list(range(A_init, A_final, step))
+        #     grouped = [A_values[i:i+group_size] for i in range(0, len(A_values), group_size)]
+        #     return grouped
+        # predicted_periods = split_A_range(A_init, A_final)
+        #
+        # # 디버깅
+        # print(f"predicted_periods: {predicted_periods}")
+        # print(f"len(predicted_periods): {len(predicted_periods)}")
+        #
+        # zero_scale = 0.05
+        # regression_args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final,
+        #                     A_step, A_range, B_init, B_final, zero_scale, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN)
+        # regression_model = Regression_Model(*regression_args)
+        # regression_results = regression_model.estimate_specific_AB_values(predicted_periods)
+        # regression_model.close_pool()
+        # np.save(SAVE_DIR_NAME + 'regression_results.npy', np.array(regression_results, dtype=object))
 
-        zero_scale = 0.
-        regression_args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final,
-                            A_step, A_range, B_init, B_final, zero_scale, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN)
-        regression_model = Regression_Model(*regression_args)
-        regression_results = regression_model.estimate_specific_AB_values(predicted_periods)
-        regression_model.close_pool()
+        regression_results= np.load(SAVE_DIR_NAME + "regression_results.npy", allow_pickle=True)
+        for i in range(len(regression_results)):
+            print(f"hier_indices: {regression_results[i][1]}")
+        # predicted_periods와 핵스핀 개수로 A, B 파라미터 예측 필요
 
         # B 값이 15000 이상인 하이퍼핀 파라미터만 필터링해서 저장
         filtered_results = [res for res in regression_results if res[1] > 15000]  # res = [A, B] 형태라고 가정
@@ -143,14 +155,6 @@ if __name__ == '__main__':
         save_path = SAVE_DIR_NAME + 'predicted_results_N32_B15000above.npy'
         np.save(save_path, filtered_results)
         print(f"✅ B > 15000인 결과를 {save_path} 에 저장했습니다.")
-
-        # try:
-        #     regression_results = regression_model.estimate_specific_AB_values(predicted_periods)
-        #     with open('./data/results/regression_results.pkl', 'wb') as f:
-        #         pickle.dump(regression_results, f)
-        # finally:
-        #     regression_model.close_pool()
-
 
     # 테스트 및 디버깅용 수동 실행 코드
     # args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, EXISTING_SPINS, A_init, A_final, A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index)
