@@ -677,3 +677,10 @@ def HPC_prediction(model, AB_idx_set, total_indices, time_range, image_width, se
         np.save(MODEL_PATH+'deno_pred_{}_A{}-{}_B{}-{}'.format(model_idx, A_first, A_end, B_first, B_end), deno_pred)
 
     return total_A_lists, total_raw_pred_list, total_deno_pred_list
+
+def return_the_number_of_spins(predicted_periods, regression_results):
+    results = []
+    for i in range(len(predicted_periods)):
+        count = [-1 for i in range(np.argmax(regression_results[i][1][0]))]
+        results.append([predicted_periods[i], count])
+    return results
