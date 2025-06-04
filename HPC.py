@@ -22,7 +22,7 @@ import itertools
 
 PRE_PROCESS = False
 PRE_SCALE = 1
-MAGNETIC_FIELD = 403.553                        # # The external magnetic field strength. Unit: Gauss
+MAGNETIC_FIELD = 483                            # The external magnetic field strength. Unit: Gauss
 GYRO_MAGNETIC_RATIO = 1.0705*1000               # Unit: Herts 
 WL_VALUE = MAGNETIC_FIELD*GYRO_MAGNETIC_RATIO*2*np.pi 
 
@@ -258,7 +258,10 @@ class Regression_Model():
             total_parameter = sum(p.numel() for p in model.parameters()) 
             print('total_parameter: ', total_parameter / 1000000, 'M')
 
-            MODEL_PATH = './data/models/'
+            MODEL_PATH = './data/models/spin_num/'
+            if not os.path.exists(MODEL_PATH): os.mkdir(MODEL_PATH)
+            MODEL_PATH = MODEL_PATH  + "reg_model"
+
             mini_batch_list = [2048]  
             learning_rate_list = [1e-6]
             op_list = [['Adabound', [1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5]]]
@@ -268,7 +271,7 @@ class Regression_Model():
             print("==================== A_idx: {}, B_idx: {} ======================".format(A_first, B_first))
 
             total_loss, total_val_loss, total_acc, trained_model = train(MODEL_PATH, self.N_PULSE, X_train_arr, Y_train_arr, model, hyperparameter_set, criterion, 
-                                                                        epochs, valid_batch, valid_mini_batch, self.exp_data_32, is_pred=False, is_print_results=False, 
+                                                                        epochs, valid_batch, valid_mini_batch, A_start=A_first, A_end=A_end, B_start=B_first, B_end=B_end, exp_data=self.exp_data_32, is_pred=False, is_print_results=False,
                                                                         is_preprocess=PRE_PROCESS, PRE_SCALE=PRE_SCALE, model_index=model_index_32,
                                                                         exp_data_deno=self.exp_data_deno_32, is_regression=False)
 
@@ -485,12 +488,9 @@ class Regression_Model():
                     total_parameter = sum(p.numel() for p in model.parameters())
                     print('total_parameter: ', total_parameter / 1000000, 'M')
 
-                    MODEL_DIR = '/test_regression/'
-                    try:
-                        os.mkdir(MODEL_DIR)
-                    except:
-                        pass
+                    MODEL_DIR = './data/models/regression/'
                     MODEL_PATH = MODEL_DIR + 'reg_model'
+                    if not os.path.exists(MODEL_DIR): os.mkdir(MODEL_DIR)
 
                     mini_batch_list = [2048]
                     learning_rate_list = [5e-6]
@@ -505,7 +505,7 @@ class Regression_Model():
                     total_loss, total_val_loss, total_acc, trained_model = train(MODEL_PATH, self.N_PULSE, X_train_arr,
                                                                                  Y_train_arr,
                                                                                  model, hyperparameter_set, criterion,
-                                                                                 epochs, valid_batch, valid_mini_batch,
+                                                                                 epochs, valid_batch, valid_mini_batch, A_start=A_first, A_end=A_end, B_start=B_first, B_end=B_end,
                                                                                  is_regression=True)
 
                     model.load_state_dict(torch.load(trained_model[0][0]))
@@ -712,7 +712,7 @@ class HPC_Model():
             total_parameter = sum(p.numel() for p in model.parameters()) 
             print('total_parameter: ', total_parameter / 1000000, 'M')
 
-            MODEL_PATH = './data/models/'
+            MODEL_PATH = './data/models/hpc/'
             if not os.path.exists(MODEL_PATH): os.mkdir(MODEL_PATH)
 
             mini_batch_list = [1024]  
@@ -722,8 +722,8 @@ class HPC_Model():
             hyperparameter_set = [[mini_batch, learning_rate, selected_optim_name] for mini_batch, learning_rate, selected_optim_name in itertools.product(mini_batch_list, learning_rate_list, op_list)]
             print("==================== A_idx: {}, B_idx: {} ======================".format(A_first, B_first))
 
-            total_loss, total_val_loss, total_acc, trained_model = train(MODEL_PATH, self.N_PULSE, X_train_arr, Y_train_arr, model, hyperparameter_set, criterion,
-                                                                        epochs, valid_batch, valid_mini_batch, self.exp_data, is_pred=False, is_print_results=False, is_preprocess=PRE_PROCESS, PRE_SCALE=PRE_SCALE,
+            total_loss, total_val_loss, total_acc, trained_model = train(MODEL_PATH + 'hpc', self.N_PULSE, X_train_arr, Y_train_arr, model, hyperparameter_set, criterion,
+                                                                        epochs, valid_batch, valid_mini_batch, A_start=A_first, A_end=A_end, B_start=B_first, B_end=B_end, exp_data=self.exp_data, is_pred=False, is_print_results=False, is_preprocess=PRE_PROCESS, PRE_SCALE=PRE_SCALE,
                                                                         model_index=model_index, exp_data_deno=self.exp_data_deno)
             min_A = np.min(np.array(AB_idx_set)[:,0])
             max_A = np.max(np.array(AB_idx_set)[:,0])
@@ -745,6 +745,232 @@ class HPC_Model():
         print('Training Completed. Parsing parameters as follows.')
         print('N:{}, A_init:{}, A_final:{}, A_range:{}, A_step:{}, B_init:{}, B_final:{}, Image Width:{}, Time range:{}, noise:{}'.format(self.N_PULSE, 
                                                             self.A_init, self.A_final, self.A_range, self.A_step, self.B_init, self.B_final, self.IMAGE_WIDTH, self.TIME_RANGE, self.noise_scale))
+        print('================================================================')
+        print('total_time_consumed', time.time() - tic)
+
+        return total_A_lists, total_raw_pred_list, total_deno_pred_list
+
+    def HPC_prediction_with_model(self):
+
+        tic = time.time()
+        if self.EXISTING_SPINS:
+            deno_pred_N32_B15000_above = np.load(self.SAVE_DIR_NAME + 'predicted_results_N32_B15000above.npy')
+        total_raw_pred_list = []
+        total_deno_pred_list = []
+        total_A_lists = []
+
+        for model_idx, [A_first, A_end, B_first, B_end] in enumerate(self.model_lists):
+
+            if self.N_PULSE == 256:
+                if (A_first >= -10000) & (A_first <= (10000 - self.A_range)):
+                    self.IMAGE_WIDTH = 4
+                    B_first = 1500
+                    print("B_first is changed to {} Hz.".format(B_first))
+                else:
+                    B_first = self.B_init
+                    print("B_first is changed to {} Hz.".format(B_first))
+
+            if self.N_PULSE == 256:
+                if (A_first <= -12000) | (A_first >= (12000 - self.A_range)):
+                    self.TIME_RANGE = 3000
+                    self.IMAGE_WIDTH = self.image_width_store
+                    print("self.TIME_RANGE is changed to 3000 points.")
+                else:
+                    self.TIME_RANGE = self.time_range_store
+
+            print("========================================================================")
+            print('A_first:{}, A_end:{}, B_first:{}, B_end:{}, Time range:{}'.format(A_first, A_end, B_first, B_end,
+                                                                                     self.TIME_RANGE))
+            print("========================================================================")
+            A_num = 1
+            B_num = 1
+            A_resol, B_resol = 50, B_end - B_first + 500
+
+            # A, B 인덱스 리스트 생성
+            A_idx_list = np.arange(A_first, A_end + A_resol, A_num * A_resol)
+            if (B_end - B_first) % B_resol == 0:
+                B_idx_list = np.arange(B_first, B_end + B_resol, B_num * B_resol)
+            else:
+                B_idx_list = np.arange(B_first, B_end, B_num * B_resol)
+            AB_idx_set = [[A_idx, B_idx] for A_idx, B_idx in itertools.product(A_idx_list, B_idx_list)]
+
+            A_side_num = A_SIDE_NUM
+            A_side_resol = A_SIDE_RESOL
+            B_target_gap = B_TARGET_GAP
+            A_target_margin = A_TARGET_MARGIN
+            A_side_margin = A_SIDE_MARGIN
+            A_far_side_margin = A_FAR_SIDE_MARGIN
+            side_candi_num = SIDE_CANDI_NUM  # the number of "how many times" to generate 'AB_side_candidate'
+
+            class_num = A_num * B_num + 1
+            cpu_num_for_multi = 20
+            batch_for_multi = 256
+            class_batch = cpu_num_for_multi * batch_for_multi
+
+            spin_zero_scale = {'same': 0.5, 'side': 0.20, 'mid': 0.05, 'far': 0.05}
+
+            torch.cuda.set_device(device=self.CUDA_DEVICE)
+            epochs = 15
+            valid_batch = 4096
+            valid_mini_batch = 1024
+
+            if self.N_PULSE == 32:
+                B_side_min, B_side_max = 6000, 70000
+                B_side_gap = 5000
+                B_target_gap = 1000
+                distance_btw_target_side = A_target_margin + A_side_margin + self.target_side_distance  # the final distance between target and side = distance_btw_target_side - (A_target_margin+A_side_margin)
+
+            elif self.N_PULSE == 256:
+                B_side_min, B_side_max = 1500, 25000
+                B_side_gap = 100  # distance between target and side (applied for both side_same and side)
+                B_target_gap = 0  # distance between targets only valid when B_num >= 2.
+                distance_btw_target_side = A_target_margin + A_side_margin + self.target_side_distance
+
+            PRE_PROCESS, PRE_SCALE = False, 1
+            if ((self.N_PULSE == 32) & (B_first < 12000)):
+                PRE_PROCESS = True
+                PRE_SCALE = 8
+                print("==================== PRE_PROCESSING:True =====================")
+
+            args = (AB_lists_dic, self.N_PULSE, A_num, B_num, A_resol, B_resol, A_side_num, A_side_resol, B_side_min,
+                    B_side_max, B_target_gap, B_side_gap, A_target_margin, A_side_margin, A_far_side_margin,
+                    class_batch, class_num, spin_zero_scale, distance_btw_target_side, side_candi_num)
+
+            TPk_AB_candi, Y_train_arr, _ = gen_TPk_AB_candidates(AB_idx_set, False, *args)
+            if self.EXISTING_SPINS:
+                A_existing_margin = 500
+                B_existing_margin = 4000
+                TPk_AB_candi = return_existing_spins_wrt_margins(deno_pred_N32_B15000_above, TPk_AB_candi,
+                                                                 A_existing_margin, B_existing_margin)
+
+            if (AB_idx_set[-1][0] < -15000) | (AB_idx_set[0][0] > 15000):
+                is_removal = True
+                temp_list0 = np.zeros(len(AB_idx_set))
+                temp_list1 = np.zeros(len(AB_idx_set))
+                temp_list2 = []
+                for idx in range(len(AB_idx_set)):
+                    model_index_temp = get_model_index(self.total_indices, AB_idx_set[idx][0],
+                                                       time_thres_idx=self.TIME_RANGE, image_width=self.IMAGE_WIDTH)
+                    temp_list0[idx] = len(model_index_temp)
+                    _, removed_index = return_index_without_A_idx(self.total_indices, model_index_temp, 0,
+                                                                  self.TIME_RANGE, 4)
+                    if (AB_idx_set[-1][0] < -15000) & (self.is_remove_model_index):
+                        deno_pred_N32_B15000_above = [[11463.29780218, 57308.60242024]]
+                        for [A, B] in deno_pred_N32_B15000_above:
+                            print("Model index is reduced w.r.t the spin of {}".format([A, B]))
+                            A_temp = return_TPk_from_AB(A, B, WL_VALUE)
+                            _, removed_index_temp = return_index_without_A_idx(self.total_indices, model_index_temp,
+                                                                               A_temp, self.TIME_RANGE, 5)
+                            removed_index += removed_index_temp
+                    temp_list1[idx] = len(removed_index)
+                    temp_list2.append(removed_index)
+                cut_idx = int(np.min(temp_list0))
+                temp_idx = np.argmax(temp_list1)
+                removed_index = temp_list2[temp_idx]
+                selected_index = [int(k) for k in np.arange(cut_idx) if k not in removed_index]
+                X_train_arr = np.zeros(
+                    (class_num, len(AB_idx_set) * class_batch, len(selected_index), 2 * self.IMAGE_WIDTH + 1))
+            else:
+                is_removal = False
+                temp_list0 = np.zeros(len(AB_idx_set))
+                for idx in range(len(AB_idx_set)):
+                    model_index_temp = get_model_index(self.total_indices, AB_idx_set[idx][0],
+                                                       time_thres_idx=self.TIME_RANGE, image_width=self.IMAGE_WIDTH)
+                    temp_list0[idx] = len(model_index_temp)
+                cut_idx = int(np.min(temp_list0))
+                selected_index = []
+                X_train_arr = np.zeros((class_num, len(AB_idx_set) * class_batch, cut_idx, 2 * self.IMAGE_WIDTH + 1))
+
+            for idx1, [A_idx, B_idx] in enumerate(AB_idx_set):
+                model_index = get_model_index(self.total_indices, A_idx, time_thres_idx=self.TIME_RANGE,
+                                              image_width=self.IMAGE_WIDTH)
+                if is_removal:
+                    model_index = model_index[selected_index]
+                else:
+                    model_index = model_index[:cut_idx]
+                for class_idx in range(class_num):
+                    for idx2 in range(cpu_num_for_multi):
+                        AB_lists_batch = TPk_AB_candi[class_idx,
+                                         idx1 * class_batch + idx2 * batch_for_multi:idx1 * class_batch + (
+                                                     idx2 + 1) * batch_for_multi]
+                        globals()["pool_{}".format(idx2)] = self.pool.apply_async(gen_M_arr_batch,
+                                                                                  [AB_lists_batch, model_index,
+                                                                                   self.time_data[:self.TIME_RANGE],
+                                                                                   WL_VALUE, self.N_PULSE, PRE_PROCESS,
+                                                                                   PRE_SCALE,
+                                                                                   self.noise_scale,
+                                                                                   self.spin_bath[:self.TIME_RANGE]])
+
+                    for idx3 in range(cpu_num_for_multi):
+                        X_train_arr[class_idx,
+                        idx1 * class_batch + idx3 * batch_for_multi:idx1 * class_batch + (idx3 + 1) * batch_for_multi] = \
+                        globals()["pool_{}".format(idx3)].get(timeout=None)
+                    print("_", end=' ')
+
+            if self.is_CNN:
+                X_train_arr = X_train_arr.reshape(class_num * len(AB_idx_set) * class_batch, 1, model_index.shape[0],
+                                                  model_index.shape[1])
+                Y_train_arr = Y_train_arr.reshape(class_num * len(AB_idx_set) * class_batch, class_num)
+                X_train_arr, Y_train_arr = shuffle(X_train_arr, Y_train_arr)
+                model = HPC_CNN(X_train_arr[0, 0].shape, Y_train_arr.shape[1]).cuda()
+            else:
+                X_train_arr = X_train_arr.reshape(class_num * len(AB_idx_set) * class_batch,
+                                                  model_index.flatten().shape[0])
+                Y_train_arr = Y_train_arr.reshape(class_num * len(AB_idx_set) * class_batch, class_num)
+                X_train_arr, Y_train_arr = shuffle(X_train_arr, Y_train_arr)
+                model = HPC(X_train_arr.shape[1], Y_train_arr.shape[1]).cuda()
+
+            try:
+                model(torch.Tensor(X_train_arr[:5]).cuda())
+            except:
+                raise NameError("The input shape should be revised")
+
+            total_parameter = sum(p.numel() for p in model.parameters())
+            print('total_parameter: ', total_parameter / 1000000, 'M')
+
+            MODEL_PATH = './data/models/hpc/'
+            if not os.path.exists(MODEL_PATH): os.mkdir(MODEL_PATH)
+
+            mini_batch_list = [1024]
+            learning_rate_list = [5e-6]
+            op_list = [['Adabound', [30, 15, 7, 1]]]
+            criterion = nn.BCELoss().cuda()
+            hyperparameter_set = [[mini_batch, learning_rate, selected_optim_name] for
+                                  mini_batch, learning_rate, selected_optim_name in
+                                  itertools.product(mini_batch_list, learning_rate_list, op_list)]
+            print("==================== A_idx: {}, B_idx: {} ======================".format(A_first, B_first))
+
+
+            min_A = np.min(np.array(AB_idx_set)[:, 0])
+            max_A = np.max(np.array(AB_idx_set)[:, 0])
+
+            model.load_state_dict(torch.load(trained_model[0][0]))
+
+            total_A_lists, total_raw_pred_list, total_deno_pred_list = HPC_prediction(model, AB_idx_set,
+                                                                                      self.total_indices,
+                                                                                      self.TIME_RANGE, self.IMAGE_WIDTH,
+                                                                                      selected_index, cut_idx,
+                                                                                      is_removal, self.exp_data,
+                                                                                      self.exp_data_deno, total_A_lists,
+                                                                                      total_raw_pred_list,
+                                                                                      total_deno_pred_list, self.is_CNN,
+                                                                                      PRE_PROCESS, PRE_SCALE,
+                                                                                      save_to_file=False)
+
+        total_raw_pred_list = np.array(total_raw_pred_list).T
+        total_deno_pred_list = np.array(total_deno_pred_list).T
+
+        np.save(self.SAVE_DIR_NAME + 'total_N{}_A_idx.npy'.format(self.N_PULSE), total_A_lists)
+        np.save(self.SAVE_DIR_NAME + 'total_N{}_raw_pred.npy'.format(self.N_PULSE), total_raw_pred_list)
+        np.save(self.SAVE_DIR_NAME + 'total_N{}_deno_pred.npy'.format(self.N_PULSE), total_deno_pred_list)
+
+        print('================================================================')
+        print('Training Completed. Parsing parameters as follows.')
+        print(
+            'N:{}, A_init:{}, A_final:{}, A_range:{}, A_step:{}, B_init:{}, B_final:{}, Image Width:{}, Time range:{}, noise:{}'.format(
+                self.N_PULSE,
+                self.A_init, self.A_final, self.A_range, self.A_step, self.B_init, self.B_final, self.IMAGE_WIDTH,
+                self.TIME_RANGE, self.noise_scale))
         print('================================================================')
         print('total_time_consumed', time.time() - tic)
 

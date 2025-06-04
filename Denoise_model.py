@@ -12,10 +12,10 @@ import torch.optim as optim
 from sklearn.utils import shuffle
 import itertools
 
-X_train_arr = np.load('Your file path for training datasets of X_train') # recommenended total batch size is over than 500,000 samples
-Y_train_arr = np.load('Your file path for training datasets of Y_train')
-X_valid_arr = np.load('Your file path for training datasets of X_valid')
-Y_valid_arr = np.load('Your file path for training datasets of Y_valid')
+X_train_arr = np.load('./data/denoising/X_train.npy') # recommenended total batch size is over than 500,000 samples
+Y_train_arr = np.load('./data/denoising/Y_train.npy')
+X_valid_arr = np.load('./data/denoising/X_valid.npy')
+Y_valid_arr = np.load('./data/denoising/Y_valid.npy')
 
 X_train_arr = np.expand_dims(X_train_arr, axis=-2)
 Y_train_arr = np.expand_dims(Y_train_arr, axis=-2)
