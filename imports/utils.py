@@ -365,7 +365,7 @@ def gen_M_arr_batch(AB_lists_batch, indexing, time_data, WL, PULSE, is_pre_proce
     else:
         for idx1, AB_list_temp in enumerate(AB_lists_batch):
             X_train_arr_batch[idx1,:] = (spin_bath[index_flat]*M_list_return(time_data[index_flat]*1e-6, WL, AB_list_temp*2*np.pi, PULSE)).reshape(indexing.shape)
-    X_train_arr_batch = X_train_arr_batch.reshape(len(AB_lists_batch), len(indexing), len(indexing[2]))
+    X_train_arr_batch = X_train_arr_batch.reshape(len(AB_lists_batch),  indexing.shape[0], indexing.shape[1] )
     if noise_scale>0:
         X_train_arr_batch += np.random.uniform(size=X_train_arr_batch.shape)*noise_scale - np.random.uniform(size=X_train_arr_batch.shape)*noise_scale
     
@@ -681,6 +681,7 @@ def HPC_prediction(model, AB_idx_set, total_indices, time_range, image_width, se
 def return_the_number_of_spins(predicted_periods, regression_results):
     results = []
     for i in range(len(predicted_periods)):
-        count = [-1 for i in range(np.argmax(regression_results[i][1][0]))]
+        if len(regression_results[i][1]) != 0:
+            count = [-1 for i in range(np.argmax(regression_results[i][1][0]))]
         results.append([predicted_periods[i], count])
     return results

@@ -21,14 +21,14 @@ import multiprocessing
 CUDA_DEVICE = 0
 N_PULSE = 32
 IMAGE_WIDTH = 10
-TIME_RANGE_32  = 7000
+TIME_RANGE_32  = 1000
 TIME_RANGE_256  = 0
 EXISTING_SPINS = 0
 EVALUATION_ALL = 0
 
 target_side_distance = 3000
-A_init  = 10000
-A_final = 20000
+A_init  = -50000
+A_final = 50000
 A_step  = 200
 A_range = 200
 B_init  = 1500

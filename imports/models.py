@@ -177,7 +177,7 @@ def train(MODEL_PATH, N_PULSE, X_train_arr, Y_train_arr, model, hyperparameter_s
     total_pred = []
     trained_model_list = []
     for mini_batch, learning_rate, selected_optim_name in hyperparameter_set:
-        file_name = MODEL_PATH + f"_N{N_PULSE}_A{A_start}_{A_end}_B{B_start}_B{B_end}_batch{mini_batch}_lr{learning_rate}_{selected_optim_name[0]}.pt"
+        file_name = MODEL_PATH + f"_N{N_PULSE}_A{A_start}_{A_end}_B{B_start}_{B_end}_batch{mini_batch}_lr{learning_rate}_{selected_optim_name[0]}.pt"
         # file_name = MODEL_PATH+'_N{}_batch{}_lr{}_{}.pt'.format(N_PULSE, mini_batch, learning_rate, selected_optim_name[0])
 
         print("\n\n========================================================================================================\n Training Start: ", time.asctime()) 
