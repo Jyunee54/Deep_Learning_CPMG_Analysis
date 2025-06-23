@@ -606,7 +606,7 @@ def return_TPk_from_AB(A: 'Hz', B: 'Hz', WL, k=10) -> "A(Hz)":
     return int(round(A_list[min_idx]/2/np.pi, 0))
 
 # return HPC_prediction_lists
-def HPC_prediction(model, AB_idx_set, total_indices, time_range, image_width, selected_index, cut_idx, is_removal, exp_data, exp_data_deno, 
+def HPC_prediction(model_params, model, AB_idx_set, total_indices, time_range, image_width, selected_index, cut_idx, is_removal, exp_data, exp_data_deno,
                    total_A_lists, total_raw_pred_list, total_deno_pred_list, is_CNN, PRE_PROCESS, PRE_SCALE, save_to_file=False):
 
     model.eval()
@@ -631,9 +631,29 @@ def HPC_prediction(model, AB_idx_set, total_indices, time_range, image_width, se
                 exp_data_test = exp_data_test.reshape(1, 1, model_index.shape[0], model_index.shape[1])
                 exp_data_test = torch.Tensor(exp_data_test).cuda()
             else:
-                exp_data_test = exp_data[model_index.flatten()]
-                exp_data_test = 1-(2*exp_data_test - 1)
-                exp_data_test = exp_data_test.reshape(1, -1)
+                # exp_data_test = exp_data_3[model_index.flatten()]
+                # exp_data_test = 1-(2*exp_data_test - 1)
+                # exp_data_test = exp_data_test.reshape(1, -1)
+                # exp_data_test = torch.Tensor(exp_data_test).cuda()
+                # Sliding window로 43x15로 잘라서 flatten 후 reshape
+                window_size = model_params[1]
+                time_index = model_params[0]
+
+                if time_index == 0:
+                    print("time index is zero. skip this prediction.")
+                    continue
+
+                step = (len(exp_data) - window_size) // (time_index - 1)
+                print(len(exp_data), window_size, time_index, step)
+                exp_data_windows = []
+                for i in range(0, len(exp_data) - window_size + 1, step):
+                    window = exp_data[i:i + window_size]
+                    if window.shape[0] == window_size:
+                        exp_data_windows.append(window)
+                exp_data_windows = np.array(exp_data_windows)
+
+                exp_data_test = 1 - (2 * exp_data_windows - 1)
+                exp_data_test = exp_data_test.flatten().reshape(1, -1)
                 exp_data_test = torch.Tensor(exp_data_test).cuda()
 
         pred = model(exp_data_test)
@@ -657,9 +677,22 @@ def HPC_prediction(model, AB_idx_set, total_indices, time_range, image_width, se
                 exp_data_test = exp_data_test.reshape(1, 1, model_index.shape[0], model_index.shape[1])
                 exp_data_test = torch.Tensor(exp_data_test).cuda()
             else:
-                exp_data_test = exp_data_deno[model_index.flatten()]
-                exp_data_test = 1-(2*exp_data_test - 1)
-                exp_data_test = exp_data_test.reshape(1, -1)
+                # exp_data_test = exp_data_deno[model_index.flatten()]
+                # exp_data_test = 1-(2*exp_data_test - 1)
+                # exp_data_test = exp_data_test.reshape(1, -1)
+                # exp_data_test = torch.Tensor(exp_data_test).cuda()
+                window_size = model_params[1]
+                time_index = model_params[0]
+                step = (len(exp_data) - window_size) // (time_index - 1)
+                exp_data_windows = []
+                for i in range(0, len(exp_data) - window_size + 1, step):
+                    window = exp_data[i:i + window_size]
+                    if window.shape[0] == window_size:
+                        exp_data_windows.append(window)
+                exp_data_windows = np.array(exp_data_windows)
+
+                exp_data_test = 1 - (2 * exp_data_windows - 1)
+                exp_data_test = exp_data_test.flatten().reshape(1, -1)
                 exp_data_test = torch.Tensor(exp_data_test).cuda()
 
         pred = model(exp_data_test)
@@ -681,7 +714,20 @@ def HPC_prediction(model, AB_idx_set, total_indices, time_range, image_width, se
 def return_the_number_of_spins(predicted_periods, regression_results):
     results = []
     for i in range(len(predicted_periods)):
+        count = []
         if len(regression_results[i][1]) != 0:
-            count = [-1 for i in range(np.argmax(regression_results[i][1][0]))]
+            cnt = 0
+            for j in range(len(regression_results[i][1])):
+                cnt += np.argmax(regression_results[i][1][j][0])
+            # count = [-1 for i in range(np.argmax(regression_results[i][1][0]))]
+            count = [-1 for _ in range(cnt)]
         results.append([predicted_periods[i], count])
     return results
+
+def return_AB_parameter(AB_values):
+    total_AB_values = []
+    for i in range(len(AB_values)):
+        num = int(len(AB_values[i]) / 2)
+        for j in range(num):
+            total_AB_values.append([AB_values[i][j * 2], AB_values[i][j * 2 + 1]])
+    return total_AB_values

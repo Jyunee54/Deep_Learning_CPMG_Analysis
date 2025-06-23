@@ -21,21 +21,21 @@ from datetime import datetime
 # 실행 설정 (기존 코드 그대로 유지)
 # ----------------------------- #
 CUDA_DEVICE = 0
-N_PULSE = 32
-IMAGE_WIDTH = 10
-TIME_RANGE_32  = 1000
+N_PULSE = 256
+IMAGE_WIDTH = 100
+TIME_RANGE_32  = 7000
 TIME_RANGE_256  = 0
 EXISTING_SPINS = 0
 EVALUATION_ALL = 0
 
 target_side_distance = 1000
-A_init  = -50000
-A_final = 49800
-A_step  = 200
+A_init  = -20000
+A_final = 20000
+A_step  = 250
 A_range = 200
 B_init  = 1500
-B_final = 50000
-noise_scale = 0.5
+B_final = 70000
+noise_scale = 0.05
 zero_scale = 0.5
 SAVE_DIR_NAME = "./data/results/"
 is_CNN = 0
@@ -48,25 +48,26 @@ if __name__ == '__main__':
     model_lists = get_AB_model_lists(A_init, A_final, A_step, A_range, B_init, B_final)
 
     # HPC 모델
-    # tic = time.time()
-    # args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, EXISTING_SPINS, A_init, A_final, A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index)
-    #
-    # hpc_model = HPC_Model(*args)
-    # total_A_lists, total_raw_pred_list, total_deno_pred_list = hpc_model.binary_classification_train()
-    # print('Total computational time:', time.time() - tic)
-    # hpc_model.close_pool()
-    #
-    # tic = time.time()
-    # predicted_periods = return_filtered_A_lists_wrt_pred(np.array(total_deno_pred_list[1,:]), np.array(total_A_lists), 0.8)
-    #
-    # timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    # filename = f"hpc/predicted_periods_{timestamp}.npy"
-    # np.save(SAVE_DIR_NAME + filename, np.array(predicted_periods, dtype=object))
-    # print("✅ HPC 결과를 저장했습니다.")
+    tic = time.time()
+    args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, EXISTING_SPINS, A_init, A_final, A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index, '')
 
-    # HPC 예측
+    hpc_model = HPC_Model(*args)
+    total_A_lists, total_raw_pred_list, total_deno_pred_list = hpc_model.binary_classification_train()
+    print('Total computational time:', time.time() - tic)
+    hpc_model.close_pool()
+
+    tic = time.time()
+    predicted_periods = return_filtered_A_lists_wrt_pred(np.array(total_deno_pred_list[1,:]), np.array(total_A_lists), 0.8)
+
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    filename = f"hpc/predicted_periods_{timestamp}.npy"
+    np.save(SAVE_DIR_NAME + filename, np.array(predicted_periods, dtype=object))
+    print("✅ HPC 결과를 저장했습니다.")
+
+    #
+    # # HPC 예측
     # tic = time.time()
-    # args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, EXISTING_SPINS, A_init, A_final, A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index)
+    # args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, EXISTING_SPINS, A_init, A_final, A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index, '')
     #
     # hpc_model = HPC_Model(*args)
     # total_A_lists, total_raw_pred_list, total_deno_pred_list = hpc_model.binary_classification_predict()
@@ -82,26 +83,27 @@ if __name__ == '__main__':
     # print("✅ HPC 결과를 저장했습니다.")
     # print("Total computational time:", time.time() - tic)
     # print(predicted_periods)
-
-
-    # Regression 모델
-    # periods에 대해 핵스핀 갯 탐지
-    # tic = time.time()
-    # predicted_periods = np.load(SAVE_DIR_NAME + 'hpc/predicted_periods_20250605-153942.npy', allow_pickle=True)
-    # zero_scale = 0.5
-    # regression_args = (
-    # CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final,
-    # A_step, A_range, B_init, B_final, zero_scale, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN)
     #
-    # regression_model = Regression_Model(*regression_args)
-    # regression_results = regression_model.estimate_specific_AB_values(predicted_periods)
-    # regression_model.close_pool()
-    # timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    # filename = f"/spin_num/regression_results_with_spin_nums_{timestamp}.npy"
-    # np.save(SAVE_DIR_NAME + filename, np.array(regression_results, dtype=object))
-    # print("✅ Regression 결과를 저장했습니다.")
-    # print('Total computational time:', time.time() - tic)
+    #
+    # # Regression 모델
+    # # periods에 대해 핵스핀 개수 탐지
+    tic = time.time()
+    # predicted_periods = np.load(SAVE_DIR_NAME + 'hpc/predicted_periods_20250611-144153.npy', allow_pickle=True)
+    zero_scale = 0.5
+    regression_args = (
+    CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final,
+    A_step, A_range, B_init, B_final, zero_scale, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN)
 
+    regression_model = Regression_Model(*regression_args)
+    regression_results = regression_model.estimate_specific_spin_nums(predicted_periods)
+    regression_model.close_pool()
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    filename = f"/spin_num/regression_results_with_spin_nums_{timestamp}.npy"
+    np.save(SAVE_DIR_NAME + filename, np.array(regression_results, dtype=object))
+    print("✅ Regression 결과를 저장했습니다.")
+    print('Total computational time:', time.time() - tic)
+    #
+    #
     # # predicted_periods와 핵스핀 개수로 A, B 파라미터 예측 필요
     zero_scale = 0.5
     regression_args = (
@@ -110,10 +112,11 @@ if __name__ == '__main__':
         is_CNN)
     regression_model = Regression_Model(*regression_args)
 
-    regression_results = np.load(SAVE_DIR_NAME + 'spin_num/regression_results_with_spin_nums_20250605-171329.npy', allow_pickle=True)
-    predicted_periods = np.load(SAVE_DIR_NAME + 'hpc/predicted_periods_20250605-154909.npy', allow_pickle=True)
+    # regression_results = np.load(SAVE_DIR_NAME + 'spin_num/regression_results_with_spin_nums_20250616-122139.npy', allow_pickle=True)
+    # predicted_periods = np.load(SAVE_DIR_NAME + 'hpc/predicted_periods_20250616-121229.npy', allow_pickle=True)
 
     A_lists = return_the_number_of_spins(predicted_periods, regression_results)
+    A_lists = np.array(A_lists, dtype=object)
     regression_AB_results = regression_model.estimate_specific_AB_values_with_the_number_of_spins(A_lists)
     regression_model.close_pool()
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -122,36 +125,62 @@ if __name__ == '__main__':
     print("✅ Regression 결과를 저장했습니다.")
     np.save(SAVE_DIR_NAME + filename, regression_AB_results)
 
-    # B 값이 15000 이상인 하이퍼핀 파라미터만 필터링해서 저장
-    # filtered_results = [res for res in regression_results if res[1] > 15000]  # res = [A, B] 형태라고 가정
-    # filtered_results = np.array(filtered_results)
-    # save_path = SAVE_DIR_NAME + 'predicted_results_N32_B15000above.npy'
-    # np.save(save_path, filtered_results)
-    # print(f"✅ B > 15000인 결과를 {save_path} 에 저장했습니다.")
+    #
+    # # B 값이 15000 이상인 하이퍼핀 파라미터만 필터링해서 저장
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    # regression_AB_results = np.load(SAVE_DIR_NAME + "regression/regression_AB_results_20250612-140916.npy", allow_pickle=True)
+    AB_values = return_AB_parameter(regression_AB_results)
+    filtered_results = [res for res in AB_values if res[1] > 15000]  # res = [A, B] 형태라고 가정
+    filtered_results = np.array(filtered_results)
+    save_path = SAVE_DIR_NAME + f'B15000above/predicted_results_N32_B15000above_{timestamp}.npy'
+    np.save(save_path, filtered_results)
+    print(f"✅ B > 15000인 결과를 {save_path} 에 저장했습니다.")
+    # #
+    # # # 여기서 얻은 것 중에, B=15000보다 큰 리스트를 저장해놓음. --> 아래 경로로.
+    # # np.load(SAVE_DIR_NAME + 'predicted_results_N32_B15000above.npy')
 
-    # 여기서 얻은 것 중에, B=15000보다 큰 리스트를 저장해놓음. --> 아래 경로로.
-    # np.load(SAVE_DIR_NAME + 'predicted_results_N32_B15000above.npy')
 
-    # EXISTING_SPINS = 1
-    # # B_init, B_final = 6000, 12000
-    # # model_lists = get_AB_model_lists(A_init, A_final, A_step, A_range, B_init, B_final)
-    # args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, EXISTING_SPINS, A_init, A_final,
-    #         A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index)
+    EXISTING_SPINS = 1
+    # model_lists = get_AB_model_lists(A_init, A_final, A_step, A_range, B_init, B_final)
+    # hpc_args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, EXISTING_SPINS, A_init, A_final,
+    #         A_step, A_range, B_init, B_final, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN, is_remove_model_index, save_path)
+    #
+    # hpc_model = HPC_Model(*hpc_args)
     # total_A_lists, total_raw_pred_list, total_deno_pred_list = hpc_model.binary_classification_train()
+    # hpc_model.close_pool()
+    #
+    # predicted_periods = return_filtered_A_lists_wrt_pred(np.array(total_deno_pred_list[1, :]), np.array(total_A_lists), 0.8)
+    # timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    # filename = f"hpc/predicted_periods_{timestamp}.npy"
+    # np.save(SAVE_DIR_NAME + filename, np.array(predicted_periods, dtype=object))
+    #
+    #
+    # # predicted_periods = np.load('./data/results/hpc/predicted_periods_20250612-165932.npy', allow_pickle=True)
     #
     # # total_raw_pred_list, total_deno_pred_list 이결과를 가지고 개수를 파악
-    # regression_model = Regression_Model(*args)
+    # regression_args = (CUDA_DEVICE, N_PULSE, IMAGE_WIDTH, TIME_RANGE_32, TIME_RANGE_256, EXISTING_SPINS, A_init, A_final,
+    #             A_step, A_range, B_init, B_final,zero_scale, noise_scale, SAVE_DIR_NAME, model_lists, target_side_distance, is_CNN)
+    # regression_model = Regression_Model(*regression_args)
+    # regression_results = regression_model.estimate_specific_spin_nums(predicted_periods)
+    # timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    # # filename = f"regression/regression_AB_results_{timestamp}.npy"
+    # filename = f'spin_num/regression_results_with_spin_nums_{timestamp}.npy'
+    # np.save(SAVE_DIR_NAME + filename, np.array(regression_results, dtype=object))
+    #
     # # regression_model.estimate_the_number_of_spins(A_lists)
     # # regression_model.estimate_specific_AB_values(A_lists_with_the_number_of_spins)
+    #
     # A_lists = return_the_number_of_spins(predicted_periods, regression_results)
-    # regression_AB_results = regression_model.estimate_specific_AB_values(A_lists)
+    # A_lists = np.array(A_lists, dtype=object)
+    # regression_AB_results = regression_model.estimate_specific_AB_values_with_the_number_of_spins(predicted_periods)
     # regression_model.close_pool()
     #
     # timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    # filename = f"/regression/regression_AB_results_{timestamp}.npy"
-    # regression_AB_results = np.array(regression_AB_results)
+    # filename = f"regression/regression_AB_results_{timestamp}.npy"
+    # regression_AB_results = np.array(regression_AB_results, dtype=object)
     # print("✅ Regression 결과를 저장했습니다.")
     # np.save(SAVE_DIR_NAME + filename, regression_AB_results)
+
 
 
 
